@@ -406,62 +406,25 @@ body {
   color: #d81b3f;
 }
 
-/* ---- チンチロ(お椀にサイコロが落ちる) ---- */
-.bowl {
-  position: relative;
-  width: 260px;
-  max-width: 90%;
-  height: 150px;
-  margin: 0 auto;
-}
-
-/* お椀の本体(口が楕円で底が丸い陶器) */
-.bowl-body {
-  position: absolute;
-  left: 8%;
-  right: 8%;
-  bottom: 0;
-  height: 108px;
-  border-radius: 0 0 50% 50% / 0 0 100% 100%;
-  background: linear-gradient(180deg, #e8e2d4 0%, #cfc6b0 55%, #a89e84 100%);
-  box-shadow: inset 0 10px 20px rgba(0, 0, 0, 0.25), 0 10px 22px rgba(0, 0, 0, 0.4);
-}
-
-/* お椀の口(開いた楕円のフチ) */
-.bowl-rim {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 18px;
-  height: 44px;
-  border-radius: 50%;
-  background: radial-gradient(ellipse at center, #6b6350 0%, #524b3c 70%, #3a3630 100%);
-  border: 3px solid #efe9db;
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.4);
-}
-
-/* サイコロはお椀の内側の底に並べる */
+/* ---- チンチロ(サイコロが上から落ちて収まる) ---- */
 .dice-wrap {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 30px;
   display: flex;
-  gap: 10px;
+  gap: 14px;
   justify-content: center;
-  z-index: 2;
+  align-items: center;
+  min-height: 60px;
 }
 
 .die {
-  width: 46px;
-  height: 46px;
+  width: 54px;
+  height: 54px;
   background: #fff;
   color: #1a1a1a;
-  border-radius: 10px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 800;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
 }
@@ -477,7 +440,7 @@ body {
   100% { transform: rotate(360deg) scale(1); }
 }
 
-/* 落下→お椀の底でワンバウンドして着地 */
+/* 落下→軽くワンバウンドして着地 */
 .die.is-dropping {
   animation: dieDrop 0.5s cubic-bezier(0.3, 0.7, 0.4, 1) both;
 }
@@ -587,6 +550,22 @@ body {
 .amida-top-btn.is-selected {
   border-color: var(--color-accent-3);
   background: rgba(55, 230, 197, 0.18);
+}
+
+/* タップでたどるモードで、現在の手番の人の枠を点滅強調する */
+.amida-top-btn.is-trace-active {
+  background: var(--color-accent-2);
+  color: #1a1a1a;
+  border: 2px solid #fff;
+  opacity: 1;
+  cursor: pointer;
+  animation: amidaTracePulse 0.8s ease-in-out infinite;
+}
+
+@keyframes amidaTracePulse {
+  0% { box-shadow: 0 0 0 0 rgba(255, 201, 60, 0.7); transform: scale(1); }
+  50% { box-shadow: 0 0 0 6px rgba(255, 201, 60, 0); transform: scale(1.06); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 201, 60, 0); transform: scale(1); }
 }
 
 .amida-bottom-label {

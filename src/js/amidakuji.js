@@ -12,10 +12,10 @@ const AMIDA_MIN_RUNGS_PER_GAP = 2;
 const AMIDA_MAX_RUNGS_PER_GAP = 4;
 /** キャンバスの余白(px) */
 const AMIDA_PADDING = 20;
-/** 線をたどるアニメーションの1レベルあたりの時間(ミリ秒) */
-const AMIDA_TRACE_STEP_MS = 90;
-/** 全員分のトレースを開始する間隔(ミリ秒) */
-const AMIDA_TRACE_PLAYER_INTERVAL_MS = 1300;
+/** 線をたどるアニメーションの1レベルあたりの時間(ミリ秒。遅くしてハラハラ感を出す) */
+const AMIDA_TRACE_STEP_MS = 170;
+/** トレース完了から次の手番へ移るまでの間(ミリ秒) */
+const AMIDA_TRACE_PLAYER_INTERVAL_MS = 700;
 /** 選択フェーズで縦線の上端から見せる割合(残り中間はカバーで隠す。CSSカバーと一致させる) */
 const AMIDA_STUB_TOP_RATIO = 0.2;
 /** 選択フェーズで縦線の下端から見せる割合 */
@@ -26,7 +26,11 @@ const AmidakujiState = {
   rungs: [], // { level, leftLineIndex } — leftLineIndex と leftLineIndex+1 を level の高さで結ぶ
   payerBottomIndex: -1,
   selections: [], // 上から順に選ばれたtopIndexの配列(playersと同じ並び)
-  isRevealing: false,
+  isRevealing: false, // reveal(タップでたどるモード)に入ったか
+  isTracing: false, // 1人分のトレースアニメーション実行中か(二重実行防止)
+  traceTurnIndex: 0, // タップでたどるモードの手番(0開始)
+  payerName: null, // 爆弾に到達した支払者(トレース中に確定)
+  completedTraces: [], // 各手番で描き終えた経路の折れ線(reveal後の再描画用)
   roundToken: 0,
 };
 
@@ -250,13 +254,24 @@ function updateRevealButtonState() {
 }
 
 /**
- * 上部ボタンがタップされたときの処理(自分の枠を選ぶ)。
+ * 上部ボタンがタップされたときの処理。
+ * 選択フェーズ(reveal前)なら「自分の枠を選ぶ」、
+ * タップでたどるモード(reveal後)なら「自分の経路をたどる」に振り分ける。
  * @param {number} topIndex
  */
 function handleAmidaTopButtonClick(topIndex) {
   if (AmidakujiState.isRevealing) {
+    handleAmidaTraceButtonClick(topIndex);
     return;
   }
+  handleAmidaSelectButtonClick(topIndex);
+}
+
+/**
+ * 選択フェーズ: 自分の枠を選ぶ処理。
+ * @param {number} topIndex
+ */
+function handleAmidaSelectButtonClick(topIndex) {
   const currentPlayerIndex = AmidakujiState.selections.length;
   if (currentPlayerIndex >= AmidakujiState.players.length) {
     return;
@@ -312,8 +327,11 @@ function animateAmidaTrace(topIndex) {
         return;
       }
 
-      drawAmidaLadder(ctx, lineCount, AmidakujiState.rungs, true);
+      // 縦線全体+横線を描き、これまでに描き終えた経路も残す
+      drawAmidaLadder(ctx, lineCount, AmidakujiState.rungs, true, false);
+      drawCompletedTraces(ctx);
 
+      // 現在たどっている経路(進行中)を上書き描画
       ctx.strokeStyle = '#ff4d8d';
       ctx.lineWidth = 4;
       ctx.beginPath();
@@ -328,6 +346,8 @@ function animateAmidaTrace(topIndex) {
         setTimeout(drawStep, AMIDA_TRACE_STEP_MS);
       } else {
         const bottomIndex = traceAmidaPath(topIndex, AmidakujiState.rungs, lineCount);
+        // 描き終えた経路を記録し、以降の再描画で残す
+        AmidakujiState.completedTraces.push(tracePoints);
         resolve(bottomIndex);
       }
     }
@@ -337,50 +357,115 @@ function animateAmidaTrace(topIndex) {
 }
 
 /**
- * 全員分のトレースを順番に実行し、最終的に支払者を確定して結果画面へ遷移する。
+ * これまでに描き終えた経路をすべて再描画する(手番が進んでも前の線を残すため)。
+ * @param {CanvasRenderingContext2D} ctx
  */
-async function revealAmidaResults() {
+function drawCompletedTraces(ctx) {
+  ctx.strokeStyle = '#ffb0cd';
+  ctx.lineWidth = 4;
+  AmidakujiState.completedTraces.forEach((points) => {
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i += 1) {
+      ctx.lineTo(points[i].x, points[i].y);
+    }
+    ctx.stroke();
+  });
+}
+
+/**
+ * タップでたどるモードで、現在の手番の人の枠だけを有効化・強調してタップを促す。
+ * 他のボタンは無効のままにする。
+ */
+function promptAmidaTraceTurn() {
+  const containerEl = document.getElementById('amidakuji-top-buttons');
+  const buttons = containerEl.querySelectorAll('.amida-top-btn');
+  const activeTopIndex = AmidakujiState.selections[AmidakujiState.traceTurnIndex];
+
+  buttons.forEach((btnEl) => {
+    const topIndex = Number(btnEl.dataset.topIndex);
+    const isActive = topIndex === activeTopIndex;
+    btnEl.disabled = !isActive;
+    btnEl.classList.toggle('is-trace-active', isActive);
+  });
+
+  const currentName = AmidakujiState.players[AmidakujiState.traceTurnIndex];
   const statusEl = document.getElementById('amidakuji-status');
-  let payerName = null;
+  statusEl.textContent = `${currentName}さんの番: 自分の選んだ枠をタップ!`;
+}
 
-  for (let i = 0; i < AmidakujiState.selections.length; i += 1) {
-    const topIndex = AmidakujiState.selections[i];
-    const playerName = AmidakujiState.players[i];
-    statusEl.textContent = `${playerName}さんの経路をたどり中…`;
-    // 各プレイヤーのトレース開始時に「トゥルッ」音を1回鳴らす
-    SoundFx.amidaTrace();
+/**
+ * タップでたどるモード用の全ボタン無効化(トレースアニメ実行中に使う)。
+ */
+function disableAllAmidaTopButtons() {
+  const containerEl = document.getElementById('amidakuji-top-buttons');
+  const buttons = containerEl.querySelectorAll('.amida-top-btn');
+  buttons.forEach((btnEl) => {
+    btnEl.disabled = true;
+    btnEl.classList.remove('is-trace-active');
+  });
+}
 
-    // eslint-disable-next-line no-await-in-loop
-    const bottomIndex = await animateAmidaTrace(topIndex);
-
-    // 途中で画面離脱・別ラウンド開始されたら以降の処理をすべて打ち切る
-    if (bottomIndex === null || !isAmidakujiRoundActive()) {
-      return;
-    }
-
-    const isPayer = bottomIndex === AmidakujiState.payerBottomIndex;
-    if (isPayer) {
-      payerName = playerName;
-    }
-
-    // eslint-disable-next-line no-await-in-loop
-    await new Promise((resolve) => setTimeout(resolve, AMIDA_TRACE_PLAYER_INTERVAL_MS - AMIDA_TRACE_STEP_MS * 4));
-
-    if (!isAmidakujiRoundActive()) {
-      return;
-    }
+/**
+ * タップでたどるモードで、現在の手番の人の枠がタップされたときの処理。
+ * その人の経路をトレースし、爆弾到達なら支払者記録、次の手番へ進める。
+ * @param {number} topIndex
+ */
+async function handleAmidaTraceButtonClick(topIndex) {
+  // トレースアニメ実行中は無視(二重実行防止)
+  if (AmidakujiState.isTracing) {
+    return;
+  }
+  // 現在の手番の人が選んだ枠以外は反応しない
+  const activeTopIndex = AmidakujiState.selections[AmidakujiState.traceTurnIndex];
+  if (topIndex !== activeTopIndex) {
+    return;
   }
 
-  if (payerName) {
-    statusEl.textContent = `${payerName}さんが支払いを引きました…`;
+  AmidakujiState.isTracing = true;
+  disableAllAmidaTopButtons();
+
+  const playerName = AmidakujiState.players[AmidakujiState.traceTurnIndex];
+  const statusEl = document.getElementById('amidakuji-status');
+  statusEl.textContent = `${playerName}さんの経路をたどり中…`;
+  SoundFx.amidaTrace();
+
+  const bottomIndex = await animateAmidaTrace(topIndex);
+
+  // 途中で画面離脱・別ラウンド開始されたら打ち切る
+  if (bottomIndex === null || !isAmidakujiRoundActive()) {
+    AmidakujiState.isTracing = false;
+    return;
   }
 
+  if (bottomIndex === AmidakujiState.payerBottomIndex) {
+    AmidakujiState.payerName = playerName;
+  }
+
+  AmidakujiState.traceTurnIndex += 1;
+  AmidakujiState.isTracing = false;
+
+  // 全員たどり終えたら支払者を確定して結果画面へ
+  if (AmidakujiState.traceTurnIndex >= AmidakujiState.selections.length) {
+    if (AmidakujiState.payerName) {
+      statusEl.textContent = `${AmidakujiState.payerName}さんが支払いを引きました…`;
+    }
+    setTimeout(() => {
+      if (!isAmidakujiRoundActive()) {
+        return;
+      }
+      showResult(AmidakujiState.payerName);
+    }, 900);
+    return;
+  }
+
+  // 次の手番へ(少し間を置いてから枠を有効化)
   setTimeout(() => {
     if (!isAmidakujiRoundActive()) {
       return;
     }
-    showResult(payerName);
-  }, 900);
+    promptAmidaTraceTurn();
+  }, AMIDA_TRACE_PLAYER_INTERVAL_MS);
 }
 
 /**
@@ -406,7 +491,9 @@ function handleAmidaRevealClick() {
   const ctx = canvas.getContext('2d');
   drawAmidaLadder(ctx, AmidakujiState.players.length, AmidakujiState.rungs, true, false);
 
-  revealAmidaResults();
+  // 自動トレースせず「タップでたどるモード」に入る。先頭の手番の枠を有効化・強調する
+  AmidakujiState.traceTurnIndex = 0;
+  promptAmidaTraceTurn();
 }
 
 /**
@@ -420,6 +507,10 @@ function startAmidakujiGame(players) {
   AmidakujiState.payerBottomIndex = Math.floor(Math.random() * lineCount);
   AmidakujiState.selections = [];
   AmidakujiState.isRevealing = false;
+  AmidakujiState.isTracing = false;
+  AmidakujiState.traceTurnIndex = 0;
+  AmidakujiState.payerName = null;
+  AmidakujiState.completedTraces = [];
   AmidakujiState.roundToken = getCurrentRoundToken();
 
   const canvas = document.getElementById('amidakuji-canvas');
