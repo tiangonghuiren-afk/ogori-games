@@ -10,6 +10,8 @@ const CHINCHIRO_DICE_COUNT = 3;
 const CHINCHIRO_ROLL_ANIMATION_MS = 900;
 /** アニメーション中の目の切り替え間隔(ミリ秒) */
 const CHINCHIRO_ROLL_TICK_MS = 80;
+/** 1人あたりの最大振り回数(目無しならこの回数まで振り直せる) */
+const CHINCHIRO_MAX_ROLLS = 3;
 
 /** 役の種類(強い順に並べておく。数値が小さいほど強い) */
 const HAND_TYPE = {
@@ -24,6 +26,7 @@ const HAND_TYPE = {
 const ChinchiroState = {
   players: [],
   currentPlayerIndex: 0,
+  currentRollCount: 0, // 現在のプレイヤーがこれまで振った回数
   results: [], // { name, dice: [n,n,n], hand: {type, tiebreak, label} }
   isRolling: false,
   roundToken: 0,
@@ -185,6 +188,7 @@ function finishChinchiroRound() {
  * サイコロを振るアニメーションを実行し、結果を確定する。
  */
 function handleChinchiroRollClick() {
+  SoundFx.unlock();
   if (ChinchiroState.isRolling) {
     return;
   }
@@ -217,16 +221,41 @@ function handleChinchiroRollClick() {
 
     setDiceRollingClass(false);
     renderDiceValues(finalDice);
+    // サイコロ着地音(3個が少しずつずれて鳴る)
+    SoundFx.diceLand();
+
+    ChinchiroState.currentRollCount += 1;
 
     const hand = judgeChinchiroHand(finalDice);
     const currentName = ChinchiroState.players[ChinchiroState.currentPlayerIndex];
+    const statusEl = document.getElementById('chinchiro-status');
+
+    // 目無しで、かつまだ振り直せる場合は確定させず同じプレイヤーで振り直す
+    const canReroll = hand.type === HAND_TYPE.MENASHI
+      && ChinchiroState.currentRollCount < CHINCHIRO_MAX_ROLLS;
+
+    if (canReroll) {
+      const remaining = CHINCHIRO_MAX_ROLLS - ChinchiroState.currentRollCount;
+      statusEl.textContent = `${currentName}さん: ${hand.label} あと${remaining}回振れる`;
+      setTimeout(() => {
+        if (!isChinchiroRoundActive()) {
+          ChinchiroState.isRolling = false;
+          return;
+        }
+        renderDiceValues(['?', '?', '?']);
+        ChinchiroState.isRolling = false;
+        rollBtn.disabled = false;
+      }, 900);
+      return;
+    }
+
+    // ここに来たら確定(役が出た or 目無しでも3回目に達した)
     ChinchiroState.results.push({ name: currentName, dice: finalDice, hand });
     renderChinchiroResultList();
-
-    const statusEl = document.getElementById('chinchiro-status');
     statusEl.textContent = `${currentName}さん: ${hand.label}`;
 
     ChinchiroState.currentPlayerIndex += 1;
+    ChinchiroState.currentRollCount = 0;
 
     setTimeout(() => {
       if (!isChinchiroRoundActive()) {
@@ -254,6 +283,7 @@ function handleChinchiroRollClick() {
 function startChinchiroRound(players, roundToken) {
   ChinchiroState.players = players;
   ChinchiroState.currentPlayerIndex = 0;
+  ChinchiroState.currentRollCount = 0;
   ChinchiroState.results = [];
   ChinchiroState.isRolling = false;
   ChinchiroState.roundToken = roundToken;

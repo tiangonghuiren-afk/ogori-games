@@ -126,6 +126,9 @@ function spinRouletteAnimation(winningIndex) {
 
   const startRotation = RouletteState.rotationDeg;
   const startTime = performance.now();
+  const segmentAngleDeg = 360 / segmentCount;
+  // 直前フレームまでに通過したセグメント境界の累積カウント
+  let lastBoundaryCount = Math.floor(startRotation / segmentAngleDeg);
 
   spinBtn.disabled = true;
   statusEl.textContent = '回転中…';
@@ -141,6 +144,16 @@ function spinRouletteAnimation(winningIndex) {
     const progress = Math.min(elapsed / durationMs, 1);
     const easedProgress = easeOutRoulette(progress);
     const currentRotation = startRotation + totalRotation * easedProgress;
+
+    // セグメント境界を通過した回数だけクリック音を鳴らす(減速に同期して間隔が伸びる)
+    const currentBoundaryCount = Math.floor(currentRotation / segmentAngleDeg);
+    const crossings = currentBoundaryCount - lastBoundaryCount;
+    if (crossings > 0) {
+      for (let i = 0; i < crossings; i += 1) {
+        SoundFx.rouletteTick();
+      }
+      lastBoundaryCount = currentBoundaryCount;
+    }
 
     drawRouletteWheel(ctx, RouletteState.players, currentRotation);
 
@@ -167,6 +180,7 @@ function spinRouletteAnimation(winningIndex) {
  * 「回す」ボタン押下時の処理。
  */
 function handleRouletteSpinClick() {
+  SoundFx.unlock();
   if (RouletteState.isSpinning) {
     return;
   }

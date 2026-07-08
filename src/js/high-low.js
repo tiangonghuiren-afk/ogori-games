@@ -10,8 +10,8 @@ const CARD_SUITS = ['♠', '♥', '♦', '♣'];
 const CARD_RED_SUITS = ['♥', '♦'];
 /** トランプのランク(表示順) */
 const CARD_RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
-/** カードがめくれるアニメーション時間(ミリ秒) */
-const CARD_FLIP_ANIMATION_MS = 550;
+/** カードが下から絞って開くアニメーション時間(ミリ秒。CSSの遷移時間と一致させる) */
+const CARD_FLIP_ANIMATION_MS = 1200;
 
 const HighLowState = {
   players: [],
@@ -113,9 +113,14 @@ function setCardButtonFlippable(isFlippable) {
  */
 function resetCardVisual() {
   const cardBtn = document.getElementById('high-low-card-btn');
-  cardBtn.classList.remove('is-flipped');
   const frontEl = document.getElementById('high-low-card-front');
+  // 次のプレイヤーへ切り替える際は、閉じるアニメーションを見せず即座に裏向きへ戻す
+  frontEl.classList.add('no-transition');
+  cardBtn.classList.remove('is-flipped');
   frontEl.textContent = '';
+  // 強制リフローで即時反映してからトランジションを戻す
+  void frontEl.offsetWidth;
+  frontEl.classList.remove('no-transition');
 }
 
 /**
@@ -164,6 +169,7 @@ function finishHighLowRound() {
  * カードをめくる処理(1人分)。
  */
 function handleHighLowCardClick() {
+  SoundFx.unlock();
   if (HighLowState.isAnimating) {
     return;
   }
@@ -179,6 +185,8 @@ function handleHighLowCardClick() {
 
   renderCardFace(card);
   const cardBtn = document.getElementById('high-low-card-btn');
+  // めくり開始(下から絞って開く)に合わせてスライド音を鳴らす
+  SoundFx.cardSqueeze();
   cardBtn.classList.add('is-flipped');
 
   setTimeout(() => {
