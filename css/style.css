@@ -326,8 +326,9 @@ body {
 }
 
 /* ---- ハイ&ロー ---- */
+/* 本物のトランプを裏から表へ返す3Dフリップ演出 */
 .card-flip-wrap {
-  /* 表面を裏面の上に重ね、下から絞って開く演出 */
+  perspective: 1000px;
 }
 
 .playing-card {
@@ -337,11 +338,33 @@ body {
   border: none;
   background: none;
   cursor: pointer;
+  transform-style: preserve-3d;
+  transition: transform 0.8s cubic-bezier(0.34, 1.4, 0.5, 1);
 }
 
 .playing-card.is-disabled {
   cursor: not-allowed;
   pointer-events: none;
+}
+
+/* めくり: カードごとrotateYで反転。途中で少し手前に持ち上げて立体感を出す */
+.playing-card.is-flipped {
+  animation: cardFlip 0.8s cubic-bezier(0.34, 1.2, 0.5, 1) forwards;
+}
+
+@keyframes cardFlip {
+  0% {
+    transform: rotateY(0deg) translateY(0) scale(1);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+  }
+  50% {
+    transform: rotateY(90deg) translateY(-10px) scale(1.08);
+    box-shadow: 0 22px 36px rgba(0, 0, 0, 0.5);
+  }
+  100% {
+    transform: rotateY(180deg) translateY(0) scale(1);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+  }
 }
 
 .playing-card-back,
@@ -354,6 +377,8 @@ body {
   justify-content: center;
   font-size: 40px;
   font-weight: 800;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 .playing-card-back {
@@ -361,51 +386,87 @@ body {
   color: #fff;
 }
 
-/* 表面は裏面の上に重ね、初期は下端0%(=完全に隠れた状態)にクリップしておく */
+/* 表面は初期状態で裏返しておき、カードが180度回ると正面を向く */
 .playing-card-front {
   background: #fff;
   color: #1a1a1a;
   font-size: 30px;
   flex-direction: column;
-  z-index: 2;
-  clip-path: inset(100% 0 0 0);
-  transition: clip-path 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: rotateY(180deg);
 }
 
-/* めくり時に下から上へ徐々に全面表示する */
-.playing-card.is-flipped .playing-card-front {
-  clip-path: inset(0 0 0 0);
-}
-
-/* 次のプレイヤーへ切り替える際、閉じるアニメーションを見せず即座に戻すため */
-.playing-card-front.no-transition {
+/* 次のプレイヤーへ切り替える際、回転アニメを見せず即座に裏向きへ戻す */
+.playing-card.no-transition {
+  animation: none;
   transition: none;
+  transform: rotateY(0deg);
 }
 
 .playing-card-front.is-red {
   color: #d81b3f;
 }
 
-/* ---- チンチロ ---- */
+/* ---- チンチロ(お椀にサイコロが落ちる) ---- */
+.bowl {
+  position: relative;
+  width: 260px;
+  max-width: 90%;
+  height: 150px;
+  margin: 0 auto;
+}
+
+/* お椀の本体(口が楕円で底が丸い陶器) */
+.bowl-body {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: 0;
+  height: 108px;
+  border-radius: 0 0 50% 50% / 0 0 100% 100%;
+  background: linear-gradient(180deg, #e8e2d4 0%, #cfc6b0 55%, #a89e84 100%);
+  box-shadow: inset 0 10px 20px rgba(0, 0, 0, 0.25), 0 10px 22px rgba(0, 0, 0, 0.4);
+}
+
+/* お椀の口(開いた楕円のフチ) */
+.bowl-rim {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 18px;
+  height: 44px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, #6b6350 0%, #524b3c 70%, #3a3630 100%);
+  border: 3px solid #efe9db;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.4);
+}
+
+/* サイコロはお椀の内側の底に並べる */
 .dice-wrap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 30px;
   display: flex;
-  gap: 14px;
+  gap: 10px;
+  justify-content: center;
+  z-index: 2;
 }
 
 .die {
-  width: 60px;
-  height: 60px;
+  width: 46px;
+  height: 46px;
   background: #fff;
   color: #1a1a1a;
-  border-radius: 12px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 26px;
+  font-size: 22px;
   font-weight: 800;
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
 }
 
+/* 転がり中(目のパラパラ切替と同期する小刻みな回転) */
 .die.is-rolling {
   animation: dieRoll 0.15s linear infinite;
 }
@@ -416,6 +477,26 @@ body {
   100% { transform: rotate(360deg) scale(1); }
 }
 
+/* 落下→お椀の底でワンバウンドして着地 */
+.die.is-dropping {
+  animation: dieDrop 0.5s cubic-bezier(0.3, 0.7, 0.4, 1) both;
+}
+
+.die.is-dropping.drop-delay-1 {
+  animation-delay: 0.08s;
+}
+
+.die.is-dropping.drop-delay-2 {
+  animation-delay: 0.16s;
+}
+
+@keyframes dieDrop {
+  0% { transform: translateY(-140px) rotate(-25deg); }
+  70% { transform: translateY(0) rotate(6deg); }
+  84% { transform: translateY(-16px) rotate(-3deg); }
+  100% { transform: translateY(0) rotate(0deg); }
+}
+
 /* ---- あみだくじ ---- */
 .amidakuji-wrap {
   position: relative;
@@ -423,10 +504,51 @@ body {
   max-width: 100%;
 }
 
+.amidakuji-canvas-wrap {
+  position: relative;
+  width: 100%;
+}
+
 #amidakuji-canvas {
   width: 100%;
   height: auto;
   display: block;
+}
+
+/* 選択フェーズで中間を覆い、経路を目で追えないようにするパネル */
+.amidakuji-cover {
+  position: absolute;
+  left: 0;
+  right: 0;
+  /* 上から約20%と下から約20%を残し、中間の約60%を隠す */
+  top: 20%;
+  height: 60%;
+  border-radius: 14px;
+  background:
+    repeating-linear-gradient(
+      45deg,
+      rgba(124, 92, 255, 0.18) 0,
+      rgba(124, 92, 255, 0.18) 10px,
+      rgba(38, 34, 66, 0.9) 10px,
+      rgba(38, 34, 66, 0.9) 20px
+    ),
+    var(--color-card);
+  border: 2px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.4);
+}
+
+.amidakuji-cover.is-hidden {
+  display: none;
+}
+
+.amidakuji-cover-text {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--color-text-dim);
+  letter-spacing: 0.15em;
 }
 
 .amidakuji-top-buttons,

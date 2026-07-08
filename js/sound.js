@@ -10,8 +10,8 @@
 const SOUND_MASTER_GAIN = 0.2;
 /** ルーレットのクリック音の長さ(秒) */
 const SOUND_TICK_DURATION_S = 0.03;
-/** カードスライド音の長さ(秒) */
-const SOUND_CARD_DURATION_S = 0.4;
+/** カードめくり(フリック)音の長さ(秒) */
+const SOUND_CARD_FLIP_DURATION_S = 0.06;
 /** サイコロ1個分の着地音の長さ(秒) */
 const SOUND_DICE_HIT_DURATION_S = 0.14;
 /** サイコロ3個をずらして鳴らす間隔(秒) */
@@ -106,33 +106,44 @@ const SoundFx = (function createSoundFx() {
   }
 
   /**
-   * カードをスライドさせる「シャカ」音(ノイズをバンドパスして上へスイープ)。
+   * トランプをめくる「パチッ」というフリック音。
+   * 短いノイズバースト(ハイパス)+三角波の速い下降で弾く感触を出す。
    */
-  function cardSqueeze() {
+  function cardFlip() {
     if (!isReady()) {
       return;
     }
     try {
       const now = audioCtx.currentTime;
+
+      // 短いノイズバースト(ハイパスで硬めの「パチッ」)
       const noise = audioCtx.createBufferSource();
-      noise.buffer = createNoiseBuffer(SOUND_CARD_DURATION_S);
-
-      const bandpass = audioCtx.createBiquadFilter();
-      bandpass.type = 'bandpass';
-      bandpass.Q.value = 1.2;
-      bandpass.frequency.setValueAtTime(1000, now);
-      bandpass.frequency.linearRampToValueAtTime(3000, now + SOUND_CARD_DURATION_S);
-
-      const gain = audioCtx.createGain();
-      gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.linearRampToValueAtTime(0.5, now + SOUND_CARD_DURATION_S * 0.3);
-      gain.gain.linearRampToValueAtTime(0.0001, now + SOUND_CARD_DURATION_S);
-
-      noise.connect(bandpass);
-      bandpass.connect(gain);
-      gain.connect(masterGain);
+      noise.buffer = createNoiseBuffer(SOUND_CARD_FLIP_DURATION_S);
+      const highpass = audioCtx.createBiquadFilter();
+      highpass.type = 'highpass';
+      highpass.frequency.value = 2500;
+      const noiseGain = audioCtx.createGain();
+      noiseGain.gain.setValueAtTime(0.6, now);
+      noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + SOUND_CARD_FLIP_DURATION_S);
+      noise.connect(highpass);
+      highpass.connect(noiseGain);
+      noiseGain.connect(masterGain);
       noise.start(now);
-      noise.stop(now + SOUND_CARD_DURATION_S + 0.01);
+      noise.stop(now + SOUND_CARD_FLIP_DURATION_S + 0.01);
+
+      // 三角波の速い下降(弾く感触)
+      const osc = audioCtx.createOscillator();
+      const oscGain = audioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(1800, now);
+      osc.frequency.exponentialRampToValueAtTime(700, now + SOUND_CARD_FLIP_DURATION_S);
+      oscGain.gain.setValueAtTime(0.0001, now);
+      oscGain.gain.linearRampToValueAtTime(0.5, now + 0.004);
+      oscGain.gain.exponentialRampToValueAtTime(0.0001, now + SOUND_CARD_FLIP_DURATION_S);
+      osc.connect(oscGain);
+      oscGain.connect(masterGain);
+      osc.start(now);
+      osc.stop(now + SOUND_CARD_FLIP_DURATION_S + 0.01);
     } catch (err) {
       // 無音で続行
     }
@@ -218,7 +229,7 @@ const SoundFx = (function createSoundFx() {
   return {
     unlock,
     rouletteTick,
-    cardSqueeze,
+    cardFlip,
     diceLand,
     amidaTrace,
   };

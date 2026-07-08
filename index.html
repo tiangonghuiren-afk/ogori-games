@@ -113,10 +113,14 @@
     </header>
     <div class="card game-stage">
       <p id="chinchiro-turn-label" class="turn-label"></p>
-      <div class="dice-wrap">
-        <div class="die" id="chinchiro-die-0">?</div>
-        <div class="die" id="chinchiro-die-1">?</div>
-        <div class="die" id="chinchiro-die-2">?</div>
+      <div class="bowl">
+        <div class="bowl-rim" aria-hidden="true"></div>
+        <div class="bowl-body" aria-hidden="true"></div>
+        <div class="dice-wrap">
+          <div class="die" id="chinchiro-die-0">?</div>
+          <div class="die" id="chinchiro-die-1">?</div>
+          <div class="die" id="chinchiro-die-2">?</div>
+        </div>
       </div>
       <button id="chinchiro-roll-btn" class="btn btn-primary btn-large">振る!</button>
       <ul id="chinchiro-result-list" class="draw-result-list"></ul>
@@ -133,8 +137,13 @@
     <div class="card game-stage">
       <p id="amidakuji-turn-label" class="turn-label"></p>
       <div class="amidakuji-wrap">
-        <canvas id="amidakuji-canvas" width="320" height="320"></canvas>
         <div id="amidakuji-top-buttons" class="amidakuji-top-buttons"></div>
+        <div class="amidakuji-canvas-wrap">
+          <canvas id="amidakuji-canvas" width="320" height="320"></canvas>
+          <div id="amidakuji-cover" class="amidakuji-cover" aria-hidden="true">
+            <span class="amidakuji-cover-text">？？？</span>
+          </div>
+        </div>
         <div id="amidakuji-bottom-labels" class="amidakuji-bottom-labels"></div>
       </div>
       <button id="amidakuji-reveal-btn" class="btn btn-primary btn-large" disabled>結果を見る!</button>
