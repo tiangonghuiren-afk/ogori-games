@@ -1,0 +1,556 @@
+/* ==========================================================================
+   ogori-games — style.css
+   スマホ縦画面ファースト / ダーク背景 + ビビッドアクセント
+   ========================================================================== */
+
+:root {
+  --color-bg: #14121f;
+  --color-bg-elevated: #1f1c31;
+  --color-card: #262242;
+  --color-border: #3a3560;
+  --color-text: #f5f3ff;
+  --color-text-dim: #b8b3d6;
+  --color-accent: #ff4d8d;
+  --color-accent-2: #ffc93c;
+  --color-accent-3: #37e6c5;
+  --color-accent-4: #7c5cff;
+  --color-danger: #ff5c5c;
+  --radius-md: 14px;
+  --radius-lg: 22px;
+  --shadow-card: 0 10px 30px rgba(0, 0, 0, 0.35);
+  --max-width: 480px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  background: radial-gradient(circle at 50% 0%, #2a2350 0%, var(--color-bg) 55%);
+  color: var(--color-text);
+  font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic", Meiryo, system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#app {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 20px 16px 40px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---- 画面切り替え ---- */
+.screen {
+  display: none;
+  flex-direction: column;
+  gap: 20px;
+  flex: 1;
+  animation: fadeIn 0.25s ease;
+}
+
+.screen.is-active {
+  display: flex;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- ヘッダー ---- */
+.app-header {
+  text-align: center;
+  padding-top: 8px;
+}
+
+.app-title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.app-subtitle {
+  margin: 6px 0 0;
+  color: var(--color-text-dim);
+  font-size: 14px;
+}
+
+/* ---- カード共通 ---- */
+.card {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+  box-shadow: var(--shadow-card);
+}
+
+.section-title {
+  margin: 0 0 12px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+/* ---- ボタン共通 ---- */
+.btn {
+  border: none;
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  font-size: 15px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: transform 0.12s ease, opacity 0.12s ease, filter 0.12s ease;
+  color: var(--color-text);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--color-accent), var(--color-accent-4));
+  color: #fff;
+}
+
+.btn-secondary {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+
+.btn-large {
+  width: 100%;
+  padding: 16px;
+  font-size: 17px;
+  border-radius: var(--radius-lg);
+}
+
+.btn-text {
+  background: none;
+  color: var(--color-text-dim);
+  text-decoration: underline;
+  padding: 8px;
+  align-self: center;
+}
+
+/* ---- 参加者入力画面 ---- */
+.player-form {
+  display: flex;
+  gap: 8px;
+}
+
+.text-input {
+  flex: 1;
+  min-width: 0;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  color: var(--color-text);
+  font-size: 15px;
+}
+
+.text-input:focus {
+  outline: 2px solid var(--color-accent-3);
+}
+
+.error-message {
+  min-height: 18px;
+  color: var(--color-danger);
+  font-size: 13px;
+  margin: 8px 0 0;
+}
+
+.player-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.player-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  animation: fadeIn 0.2s ease;
+}
+
+.player-list-item-name {
+  font-weight: 600;
+}
+
+.player-remove-btn {
+  background: none;
+  border: none;
+  color: var(--color-danger);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.player-count {
+  text-align: right;
+  color: var(--color-text-dim);
+  font-size: 13px;
+  margin: 10px 0 0;
+}
+
+/* ---- ゲーム選択画面 ---- */
+.game-card-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.game-card {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 18px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  color: var(--color-text);
+  box-shadow: var(--shadow-card);
+  transition: transform 0.12s ease, border-color 0.12s ease;
+}
+
+.game-card:active {
+  transform: scale(0.96);
+  border-color: var(--color-accent-3);
+}
+
+.game-card-emoji {
+  font-size: 34px;
+}
+
+.game-card-name {
+  font-weight: 800;
+  font-size: 15px;
+}
+
+.game-card-desc {
+  font-size: 11px;
+  color: var(--color-text-dim);
+  text-align: center;
+}
+
+/* ---- ゲーム共通ステージ ---- */
+.game-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+
+.turn-label {
+  font-size: 20px;
+  font-weight: 800;
+  text-align: center;
+  color: var(--color-accent-2);
+  min-height: 28px;
+}
+
+.draw-result-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.draw-result-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  font-size: 14px;
+}
+
+.draw-result-item.is-loser {
+  border-color: var(--color-danger);
+  background: rgba(255, 92, 92, 0.12);
+}
+
+/* ---- 男気ルーレット ---- */
+.roulette-wrap {
+  position: relative;
+  width: 320px;
+  max-width: 100%;
+}
+
+#roulette-canvas {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 50%;
+}
+
+.roulette-pointer {
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 28px;
+  color: var(--color-accent-2);
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+
+/* ---- ハイ&ロー ---- */
+.card-flip-wrap {
+  perspective: 900px;
+}
+
+.playing-card {
+  position: relative;
+  width: 140px;
+  height: 196px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  transform-style: preserve-3d;
+  transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+.playing-card.is-flipped {
+  transform: rotateY(180deg);
+}
+
+.playing-card.is-disabled {
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.playing-card-back,
+.playing-card-front {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  font-weight: 800;
+}
+
+.playing-card-back {
+  background: linear-gradient(135deg, var(--color-accent-4), var(--color-accent));
+  color: #fff;
+}
+
+.playing-card-front {
+  background: #fff;
+  color: #1a1a1a;
+  transform: rotateY(180deg);
+  font-size: 30px;
+  flex-direction: column;
+}
+
+.playing-card-front.is-red {
+  color: #d81b3f;
+}
+
+/* ---- チンチロ ---- */
+.dice-wrap {
+  display: flex;
+  gap: 14px;
+}
+
+.die {
+  width: 60px;
+  height: 60px;
+  background: #fff;
+  color: #1a1a1a;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  font-weight: 800;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3);
+}
+
+.die.is-rolling {
+  animation: dieRoll 0.15s linear infinite;
+}
+
+@keyframes dieRoll {
+  0% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(180deg) scale(1.08); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+
+/* ---- あみだくじ ---- */
+.amidakuji-wrap {
+  position: relative;
+  width: 320px;
+  max-width: 100%;
+}
+
+#amidakuji-canvas {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.amidakuji-top-buttons,
+.amidakuji-bottom-labels {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.amidakuji-top-buttons {
+  margin-bottom: 4px;
+}
+
+.amidakuji-bottom-labels {
+  margin-top: 4px;
+}
+
+.amida-top-btn {
+  flex: 1;
+  margin: 0 2px;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  color: var(--color-text);
+  font-size: 11px;
+  padding: 6px 2px;
+  cursor: pointer;
+}
+
+.amida-top-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.amida-top-btn.is-selected {
+  border-color: var(--color-accent-3);
+  background: rgba(55, 230, 197, 0.18);
+}
+
+.amida-bottom-label {
+  flex: 1;
+  margin: 0 2px;
+  text-align: center;
+  font-size: 16px;
+}
+
+/* ---- 結果画面 ---- */
+#screen-result {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 70vh;
+  position: relative;
+  overflow: hidden;
+}
+
+.result-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.result-lead {
+  font-size: 16px;
+  color: var(--color-text-dim);
+  margin: 0;
+}
+
+.result-payer-name {
+  font-size: 44px;
+  font-weight: 900;
+  margin: 6px 0;
+  background: linear-gradient(135deg, var(--color-accent-2), var(--color-accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: popIn 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.4);
+  word-break: break-all;
+}
+
+@keyframes popIn {
+  0% { transform: scale(0.4); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.result-message {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0 0 24px;
+}
+
+.result-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 280px;
+}
+
+.result-confetti {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.confetti-piece {
+  position: absolute;
+  top: -20px;
+  width: 8px;
+  height: 14px;
+  opacity: 0.9;
+  animation-name: confettiFall;
+  animation-timing-function: linear;
+  animation-iteration-count: 1;
+}
+
+@keyframes confettiFall {
+  0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(110vh) rotate(540deg); opacity: 0.3; }
+}
+
+/* ---- レスポンシブ: 極小幅対策 ---- */
+@media (max-width: 360px) {
+  .app-title { font-size: 22px; }
+  .result-payer-name { font-size: 36px; }
+  .die { width: 50px; height: 50px; font-size: 22px; }
+}
