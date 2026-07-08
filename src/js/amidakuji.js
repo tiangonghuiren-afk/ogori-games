@@ -16,6 +16,10 @@ const AMIDA_PADDING = 20;
 const AMIDA_TRACE_STEP_MS = 90;
 /** 全員分のトレースを開始する間隔(ミリ秒) */
 const AMIDA_TRACE_PLAYER_INTERVAL_MS = 1300;
+/** 選択フェーズで縦線の上端から見せる割合(残り中間はカバーで隠す。CSSカバーと一致させる) */
+const AMIDA_STUB_TOP_RATIO = 0.2;
+/** 選択フェーズで縦線の下端から見せる割合 */
+const AMIDA_STUB_BOTTOM_RATIO = 0.2;
 
 const AmidakujiState = {
   players: [],
@@ -109,8 +113,9 @@ function traceAmidaPath(startTopIndex, rungs, lineCount) {
  * @param {number} lineCount
  * @param {{level: number, leftLineIndex: number}[]} rungs
  * @param {boolean} includeRungs - trueなら横線も描く(reveal後)。falseなら縦線のみ
+ * @param {boolean} [stubsOnly=false] - trueなら縦線を上端/下端のスタブ部分だけ描く(選択フェーズ)
  */
-function drawAmidaLadder(ctx, lineCount, rungs, includeRungs) {
+function drawAmidaLadder(ctx, lineCount, rungs, includeRungs, stubsOnly) {
   const canvasWidth = ctx.canvas.width;
   const canvasHeight = ctx.canvas.height;
   const usableWidth = canvasWidth - AMIDA_PADDING * 2;
@@ -118,18 +123,35 @@ function drawAmidaLadder(ctx, lineCount, rungs, includeRungs) {
   const lineSpacing = usableWidth / (lineCount - 1);
   const levelSpacing = usableHeight / (AMIDA_VERTICAL_LEVELS - 1);
 
+  const topY = AMIDA_PADDING;
+  const bottomY = canvasHeight - AMIDA_PADDING;
+  const lineHeight = bottomY - topY;
+  const topStubEndY = topY + lineHeight * AMIDA_STUB_TOP_RATIO;
+  const bottomStubStartY = bottomY - lineHeight * AMIDA_STUB_BOTTOM_RATIO;
+
   ctx.clearRect(0, 0, canvasWidth, canvasHeight);
   ctx.strokeStyle = '#5c56a0';
   ctx.lineWidth = 3;
   ctx.lineCap = 'round';
 
-  // 縦線
+  // 縦線(stubsOnly時は上端・下端のスタブ部分のみ描き、中間は描かない)
   for (let i = 0; i < lineCount; i += 1) {
     const x = AMIDA_PADDING + lineSpacing * i;
-    ctx.beginPath();
-    ctx.moveTo(x, AMIDA_PADDING);
-    ctx.lineTo(x, canvasHeight - AMIDA_PADDING);
-    ctx.stroke();
+    if (stubsOnly) {
+      ctx.beginPath();
+      ctx.moveTo(x, topY);
+      ctx.lineTo(x, topStubEndY);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x, bottomStubStartY);
+      ctx.lineTo(x, bottomY);
+      ctx.stroke();
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(x, topY);
+      ctx.lineTo(x, bottomY);
+      ctx.stroke();
+    }
   }
 
   // 横線(reveal後のみ描画する。初期状態では隠しておく)
@@ -377,10 +399,12 @@ function handleAmidaRevealClick() {
   const revealBtn = document.getElementById('amidakuji-reveal-btn');
   revealBtn.disabled = true;
 
-  // reveal時に横線を出現させる
+  // reveal時に中間の覆いを外し、縦線全体+横線を出現させる
+  const coverEl = document.getElementById('amidakuji-cover');
+  coverEl.classList.add('is-hidden');
   const canvas = document.getElementById('amidakuji-canvas');
   const ctx = canvas.getContext('2d');
-  drawAmidaLadder(ctx, AmidakujiState.players.length, AmidakujiState.rungs, true);
+  drawAmidaLadder(ctx, AmidakujiState.players.length, AmidakujiState.rungs, true, false);
 
   revealAmidaResults();
 }
@@ -400,8 +424,11 @@ function startAmidakujiGame(players) {
 
   const canvas = document.getElementById('amidakuji-canvas');
   const ctx = canvas.getContext('2d');
-  // 初期は縦線のみ描画し、横線は「結果を見る」時に出現させる
-  drawAmidaLadder(ctx, lineCount, AmidakujiState.rungs, false);
+  // 選択フェーズは縦線の上端/下端スタブのみ描画し、中間は覆いで隠す
+  drawAmidaLadder(ctx, lineCount, AmidakujiState.rungs, false, true);
+  // 「もう一回」で戻ったときも中間が隠れた状態から始まるよう覆いを再表示する
+  const coverEl = document.getElementById('amidakuji-cover');
+  coverEl.classList.remove('is-hidden');
 
   renderAmidaTopButtons();
   renderAmidaBottomLabels();

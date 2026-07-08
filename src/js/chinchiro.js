@@ -12,6 +12,8 @@ const CHINCHIRO_ROLL_ANIMATION_MS = 900;
 const CHINCHIRO_ROLL_TICK_MS = 80;
 /** 1人あたりの最大振り回数(目無しならこの回数まで振り直せる) */
 const CHINCHIRO_MAX_ROLLS = 3;
+/** 落下開始から着地(お椀の底でバウンド)までの目安時間(ミリ秒。着地音を合わせる) */
+const CHINCHIRO_DICE_LAND_DELAY_MS = 350;
 
 /** 役の種類(強い順に並べておく。数値が小さいほど強い) */
 const HAND_TYPE = {
@@ -114,6 +116,35 @@ function setDiceRollingClass(isRolling) {
   for (let i = 0; i < CHINCHIRO_DICE_COUNT; i += 1) {
     const dieEl = document.getElementById(`chinchiro-die-${i}`);
     dieEl.classList.toggle('is-rolling', isRolling);
+  }
+}
+
+/**
+ * サイコロをお椀へ落下→着地させるアニメーションを開始する。
+ * 3個は少しずつタイミングをずらす(CSSの drop-delay-* クラスで制御)。
+ */
+function triggerDiceDrop() {
+  for (let i = 0; i < CHINCHIRO_DICE_COUNT; i += 1) {
+    const dieEl = document.getElementById(`chinchiro-die-${i}`);
+    // 再生し直すため一度クラスを外して強制リフローしてから付与する
+    dieEl.classList.remove('is-dropping', 'drop-delay-1', 'drop-delay-2');
+    void dieEl.offsetWidth;
+    dieEl.classList.add('is-dropping');
+    if (i === 1) {
+      dieEl.classList.add('drop-delay-1');
+    } else if (i === 2) {
+      dieEl.classList.add('drop-delay-2');
+    }
+  }
+}
+
+/**
+ * 落下アニメーション用クラスをすべて外す(次の振り/リセット用)。
+ */
+function clearDiceDrop() {
+  for (let i = 0; i < CHINCHIRO_DICE_COUNT; i += 1) {
+    const dieEl = document.getElementById(`chinchiro-die-${i}`);
+    dieEl.classList.remove('is-dropping', 'drop-delay-1', 'drop-delay-2');
   }
 }
 
@@ -221,8 +252,15 @@ function handleChinchiroRollClick() {
 
     setDiceRollingClass(false);
     renderDiceValues(finalDice);
-    // サイコロ着地音(3個が少しずつずれて鳴る)
-    SoundFx.diceLand();
+    // お椀へ落下→着地させる演出
+    triggerDiceDrop();
+    // 落下が着地するタイミングに合わせてサイコロ着地音を鳴らす
+    setTimeout(() => {
+      if (!isChinchiroRoundActive()) {
+        return;
+      }
+      SoundFx.diceLand();
+    }, CHINCHIRO_DICE_LAND_DELAY_MS);
 
     ChinchiroState.currentRollCount += 1;
 
@@ -242,6 +280,7 @@ function handleChinchiroRollClick() {
           ChinchiroState.isRolling = false;
           return;
         }
+        clearDiceDrop();
         renderDiceValues(['?', '?', '?']);
         ChinchiroState.isRolling = false;
         rollBtn.disabled = false;
@@ -268,6 +307,7 @@ function handleChinchiroRollClick() {
         return;
       }
       renderChinchiroTurn();
+      clearDiceDrop();
       renderDiceValues(['?', '?', '?']);
       ChinchiroState.isRolling = false;
       rollBtn.disabled = false;
@@ -288,6 +328,7 @@ function startChinchiroRound(players, roundToken) {
   ChinchiroState.isRolling = false;
   ChinchiroState.roundToken = roundToken;
 
+  clearDiceDrop();
   renderDiceValues(['?', '?', '?']);
   renderChinchiroResultList();
   renderChinchiroTurn();
