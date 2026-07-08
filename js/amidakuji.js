@@ -104,12 +104,13 @@ function traceAmidaPath(startTopIndex, rungs, lineCount) {
 }
 
 /**
- * あみだくじ全体(縦線+横線)をcanvasに描画する。
+ * あみだくじ(縦線と、必要に応じて横線)をcanvasに描画する。
  * @param {CanvasRenderingContext2D} ctx
  * @param {number} lineCount
  * @param {{level: number, leftLineIndex: number}[]} rungs
+ * @param {boolean} includeRungs - trueなら横線も描く(reveal後)。falseなら縦線のみ
  */
-function drawAmidaLadder(ctx, lineCount, rungs) {
+function drawAmidaLadder(ctx, lineCount, rungs, includeRungs) {
   const canvasWidth = ctx.canvas.width;
   const canvasHeight = ctx.canvas.height;
   const usableWidth = canvasWidth - AMIDA_PADDING * 2;
@@ -131,17 +132,19 @@ function drawAmidaLadder(ctx, lineCount, rungs) {
     ctx.stroke();
   }
 
-  // 横線
-  ctx.strokeStyle = '#37e6c5';
-  rungs.forEach((rung) => {
-    const y = AMIDA_PADDING + levelSpacing * rung.level;
-    const x1 = AMIDA_PADDING + lineSpacing * rung.leftLineIndex;
-    const x2 = AMIDA_PADDING + lineSpacing * (rung.leftLineIndex + 1);
-    ctx.beginPath();
-    ctx.moveTo(x1, y);
-    ctx.lineTo(x2, y);
-    ctx.stroke();
-  });
+  // 横線(reveal後のみ描画する。初期状態では隠しておく)
+  if (includeRungs) {
+    ctx.strokeStyle = '#37e6c5';
+    rungs.forEach((rung) => {
+      const y = AMIDA_PADDING + levelSpacing * rung.level;
+      const x1 = AMIDA_PADDING + lineSpacing * rung.leftLineIndex;
+      const x2 = AMIDA_PADDING + lineSpacing * (rung.leftLineIndex + 1);
+      ctx.beginPath();
+      ctx.moveTo(x1, y);
+      ctx.lineTo(x2, y);
+      ctx.stroke();
+    });
+  }
 }
 
 /**
@@ -187,7 +190,7 @@ function renderAmidaTopButtons() {
     const btnEl = document.createElement('button');
     btnEl.type = 'button';
     btnEl.className = 'amida-top-btn';
-    btnEl.textContent = '？';
+    btnEl.textContent = '選ぶ';
     btnEl.dataset.topIndex = String(topIndex);
     btnEl.addEventListener('click', () => handleAmidaTopButtonClick(topIndex));
     containerEl.appendChild(btnEl);
@@ -195,7 +198,8 @@ function renderAmidaTopButtons() {
 }
 
 /**
- * 下部のラベル(セーフ/支払い、まだ非表示)を初期化する。
+ * 下部のラベルを初期化する。支払い位置には最初から💣、他はセーフ(✅)を見せる。
+ * どの上の枠がその爆弾につながるかは横線しだいで分からない設計。
  */
 function renderAmidaBottomLabels() {
   const containerEl = document.getElementById('amidakuji-bottom-labels');
@@ -204,7 +208,11 @@ function renderAmidaBottomLabels() {
   for (let i = 0; i < AmidakujiState.players.length; i += 1) {
     const labelEl = document.createElement('span');
     labelEl.className = 'amida-bottom-label';
-    labelEl.textContent = '？';
+    const isPayerSlot = i === AmidakujiState.payerBottomIndex;
+    labelEl.textContent = isPayerSlot ? '💣' : '✅';
+    if (isPayerSlot) {
+      labelEl.classList.add('is-bomb');
+    }
     labelEl.id = `amida-bottom-${i}`;
     containerEl.appendChild(labelEl);
   }
@@ -282,7 +290,7 @@ function animateAmidaTrace(topIndex) {
         return;
       }
 
-      drawAmidaLadder(ctx, lineCount, AmidakujiState.rungs);
+      drawAmidaLadder(ctx, lineCount, AmidakujiState.rungs, true);
 
       ctx.strokeStyle = '#ff4d8d';
       ctx.lineWidth = 4;
@@ -317,6 +325,8 @@ async function revealAmidaResults() {
     const topIndex = AmidakujiState.selections[i];
     const playerName = AmidakujiState.players[i];
     statusEl.textContent = `${playerName}さんの経路をたどり中…`;
+    // 各プレイヤーのトレース開始時に「トゥルッ」音を1回鳴らす
+    SoundFx.amidaTrace();
 
     // eslint-disable-next-line no-await-in-loop
     const bottomIndex = await animateAmidaTrace(topIndex);
@@ -326,10 +336,7 @@ async function revealAmidaResults() {
       return;
     }
 
-    const bottomLabelEl = document.getElementById(`amida-bottom-${bottomIndex}`);
     const isPayer = bottomIndex === AmidakujiState.payerBottomIndex;
-    bottomLabelEl.textContent = isPayer ? '💸' : '✅';
-
     if (isPayer) {
       payerName = playerName;
     }
@@ -358,6 +365,7 @@ async function revealAmidaResults() {
  * 「結果を見る」ボタン押下時の処理。
  */
 function handleAmidaRevealClick() {
+  SoundFx.unlock();
   if (AmidakujiState.isRevealing) {
     return;
   }
@@ -368,6 +376,11 @@ function handleAmidaRevealClick() {
 
   const revealBtn = document.getElementById('amidakuji-reveal-btn');
   revealBtn.disabled = true;
+
+  // reveal時に横線を出現させる
+  const canvas = document.getElementById('amidakuji-canvas');
+  const ctx = canvas.getContext('2d');
+  drawAmidaLadder(ctx, AmidakujiState.players.length, AmidakujiState.rungs, true);
 
   revealAmidaResults();
 }
@@ -387,7 +400,8 @@ function startAmidakujiGame(players) {
 
   const canvas = document.getElementById('amidakuji-canvas');
   const ctx = canvas.getContext('2d');
-  drawAmidaLadder(ctx, lineCount, AmidakujiState.rungs);
+  // 初期は縦線のみ描画し、横線は「結果を見る」時に出現させる
+  drawAmidaLadder(ctx, lineCount, AmidakujiState.rungs, false);
 
   renderAmidaTopButtons();
   renderAmidaBottomLabels();
@@ -395,7 +409,7 @@ function startAmidakujiGame(players) {
 
   const statusEl = document.getElementById('amidakuji-status');
   const firstName = players[0];
-  statusEl.textContent = `${firstName}さんの番。枠を選んでね`;
+  statusEl.textContent = `${firstName}さんの番。上の「選ぶ」から枠を選んでね`;
 }
 
 function initAmidakujiEvents() {

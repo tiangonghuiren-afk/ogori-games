@@ -327,7 +327,7 @@ body {
 
 /* ---- ハイ&ロー ---- */
 .card-flip-wrap {
-  perspective: 900px;
+  /* 表面を裏面の上に重ね、下から絞って開く演出 */
 }
 
 .playing-card {
@@ -337,12 +337,6 @@ body {
   border: none;
   background: none;
   cursor: pointer;
-  transform-style: preserve-3d;
-  transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.3, 1);
-}
-
-.playing-card.is-flipped {
-  transform: rotateY(180deg);
 }
 
 .playing-card.is-disabled {
@@ -354,7 +348,6 @@ body {
 .playing-card-front {
   position: absolute;
   inset: 0;
-  backface-visibility: hidden;
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
@@ -368,12 +361,25 @@ body {
   color: #fff;
 }
 
+/* 表面は裏面の上に重ね、初期は下端0%(=完全に隠れた状態)にクリップしておく */
 .playing-card-front {
   background: #fff;
   color: #1a1a1a;
-  transform: rotateY(180deg);
   font-size: 30px;
   flex-direction: column;
+  z-index: 2;
+  clip-path: inset(100% 0 0 0);
+  transition: clip-path 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* めくり時に下から上へ徐々に全面表示する */
+.playing-card.is-flipped .playing-card-front {
+  clip-path: inset(0 0 0 0);
+}
+
+/* 次のプレイヤーへ切り替える際、閉じるアニメーションを見せず即座に戻すため */
+.playing-card-front.no-transition {
+  transition: none;
 }
 
 .playing-card-front.is-red {
@@ -441,12 +447,13 @@ body {
 .amida-top-btn {
   flex: 1;
   margin: 0 2px;
-  background: var(--color-bg-elevated);
-  border: 1px solid var(--color-border);
+  background: var(--color-accent-4);
+  border: 1px solid var(--color-accent-3);
   border-radius: 8px;
-  color: var(--color-text);
+  color: #fff;
+  font-weight: 700;
   font-size: 11px;
-  padding: 6px 2px;
+  padding: 8px 2px;
   cursor: pointer;
 }
 
@@ -465,6 +472,11 @@ body {
   margin: 0 2px;
   text-align: center;
   font-size: 16px;
+}
+
+.amida-bottom-label.is-bomb {
+  font-size: 20px;
+  filter: drop-shadow(0 0 4px rgba(255, 77, 141, 0.8));
 }
 
 /* ---- 結果画面 ---- */
